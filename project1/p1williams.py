@@ -7,11 +7,13 @@ import pathlib
 
 Path = pathlib.Path
 
+base_path = "/home/jake_w71753/SecureSoftwareProgramming/project3/logs/"
+
 def getUserAuthTimes(userid):
     """
     Returns a list of the dates of login for user userid from log/auth.log
     """
-    with Popen(["grep", userid, "/home/jake_w71753/logs/auth.log"], stdout=PIPE) as proc:
+    with Popen(["grep", userid, base_path + "auth.log"], stdout=PIPE) as proc:
         # Pipe the output of subprocess.Popen() to stdout
         dtl = []
         for line in proc.stdout.readlines():
@@ -26,7 +28,7 @@ def getInvalidLogins():
     Returns a dictionary mapping invalid user ids to # of failed logins on log/auth.log
     """
     #extractLogFiles("auth", logdir="/home/jake_w71753/logs")
-    with Popen(["grep", "invalid", "/home/jake_w71753/logs/auth.log"], stdout=PIPE) as proc:
+    with Popen(["grep", "invalid", base_path + "auth.log"], stdout=PIPE) as proc:
         # Pipe the output of subprocess.Popen() to stdout
         invals = {}
         for line in proc.stdout.readlines():
@@ -45,11 +47,13 @@ def extractLogFiles(logfile,logdir = "/home/twmoore/log"):
     for p in list(path.glob(logfile + "*.gz")):
         run(["gunzip", p])
     for p in list(path.glob(logfile + "*")):
+        if '.all' in p.as_posix():
+            continue
         with Popen(["cat", p], stdout=PIPE) as proc:
             for line in proc.stdout.readlines():
                 new_content += line.decode("utf-8")
     
-    f = open(logdir + "/" + logfile + ".all", "w")
+    f = open(logdir + logfile + ".all", "w")
     
     f.write(new_content)
     f.close()
@@ -59,8 +63,8 @@ def extractLogFiles(logfile,logdir = "/home/twmoore/log"):
     
 #find all IP addresses for invalid logins, then see which IPs are also used for scanning
 def compareInvalidIPs():
-    #extractLogFiles("auth", logdir="/home/jake_w71753/logs")
-    with Popen(["grep", "Invalid", "/home/jake_w71753/logs/auth.all"], stdout=PIPE) as proc:
+    extractLogFiles("auth", logdir=base_path)
+    with Popen(["grep", "Invalid", f"{base_path}auth.all"], stdout=PIPE) as proc:
         # Pipe the output of subprocess.Popen() to stdout
         invals = []
         for line in proc.stdout.readlines():
@@ -72,23 +76,24 @@ def compareInvalidIPs():
             if user not in invals:
                 invals.append(user)
         
-    extractLogFiles("ufw", logdir="/home/jake_w71753/logs")
+    extractLogFiles("ufw", logdir=base_path)
     fw_ips = []
     i = 1
-    with Popen(["grep", "BLOCK", "/home/jake_w71753/logs/ufw.all"], stdout=PIPE) as proc:
+    with Popen(["grep", "BLOCK", f"{base_path}ufw.all"], stdout=PIPE) as proc:
         lines = proc.stdout.readlines();
         for line in lines:
+            src_ips = [ip for ip in line.decode("utf-8").split(" ") if "SRC=" in ip]
+            ip = src_ips[0].replace("SRC=", "")
+            if ip not in fw_ips:
+                fw_ips.append(ip)
             
-            #print(line.decode("utf-8").split()[11].replace("SRC=", ""))
-            if line.decode("utf-8").split()[11].replace("SRC=", "") not in fw_ips:
-                fw_ips.append(line.decode("utf-8").split()[11].replace("SRC=", ""))
-            #print(f"{i}/{len(lines)}")
             i=i+1
-        
+    
     same_ips = []
     for ip in fw_ips:
-        if ip in invals:
+        if ip in invals:            
             same_ips.append(ip)
+
     print(same_ips)
     return same_ips
 
