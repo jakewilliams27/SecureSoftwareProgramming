@@ -42,7 +42,7 @@ def getInvalidLogins():
 
 #extract all gzipped files for a specified file. put them in a combined file
 def extractLogFiles(logfile,logdir = "/home/twmoore/log"):
-    new_content = ""    
+    new_content = ""
     path = Path(logdir)
     for p in list(path.glob(logfile + "*.gz")):
         run(["gunzip", p])
@@ -82,8 +82,7 @@ def compareInvalidIPs():
     with Popen(["grep", "BLOCK", f"{base_path}ufw.all"], stdout=PIPE) as proc:
         lines = proc.stdout.readlines();
         for line in lines:
-            src_ips = [ip for ip in line.decode("utf-8").split(" ") if "SRC=" in ip]
-            ip = src_ips[0].replace("SRC=", "")
+            ip = [ip for ip in line.decode("utf-8").split(" ") if "SRC=" in ip][0].replace("SRC=", "")
             if ip not in fw_ips:
                 fw_ips.append(ip)
             
@@ -94,11 +93,10 @@ def compareInvalidIPs():
         if ip in invals:            
             same_ips.append(ip)
 
-    print(same_ips)
     return same_ips
 
 
 if __name__=="__main__":
     print(getUserAuthTimes("tmoore"))
     print(getInvalidLogins())
-    compareInvalidIPs()
+    print(compareInvalidIPs())
